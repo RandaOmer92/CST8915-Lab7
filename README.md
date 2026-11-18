@@ -20,9 +20,24 @@
 
 ### 1. Is RabbitMQ stateless or stateful application?
 
+RabbitMQ is **stateful**. 
+
+- A **stateless app does not keep important data. If it 
+restarts, nothing is lost. Example: `product-service`.
+- A **stateful** app keeps data that must not be lost. RabbitMQ keeps the **queues** and the **messages** (our orders) until someone reads them.
+
+Kubernetes says StatefulSets are for apps that need **persistent storage** or a **stable, unique network identity** [5]. RabbitMQ needs both, so it is a stateful app.
 
 ### 2. What is the problem with running RabbitMQ without persistent storage?
 
+In our YAML file, RabbitMQ runs as a normal **Deployment** with **no volume**. So RabbitMQ keeps its queues and messages **inside the pod**.
+
+Storage inside the pod is **ephemeral**. Kubernetes says "ephemeral" means there is **no long-term guarantee** that the data will stay [2]. It is meant for temporary things like scratch space, cache and logs [2].
+
+This means:
+- **Orders can be lost.** If the pod goes away, the orders waiting in the queue go away too.
+- **"Durable" does not help.** In my video the queue had the **D** (durable) label, but the order was still lost, because it was saved inside the pod.
+- **The pod name changes.** RabbitMQ named itself after the pod (`rabbit@rabbitmq-5d4b559c94-59hlk`). The new pod got a new random name, and it started empty.
 
 ### 3. What happens when the RabbitMQ pod is deleted or restarted?
 
