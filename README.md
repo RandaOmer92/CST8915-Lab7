@@ -41,9 +41,33 @@ This means:
 
 ### 3. What happens when the RabbitMQ pod is deleted or restarted?
 
+This is what happened in my demo:
+
+1. Before: `order_queue` had **1 order** ready. The node name was `rabbit@rabbitmq-5d4b559c94-59hlk`.
+2. I ran `kubectl delete pods rabbitmq-5d4b559c94-59hlk`.
+3. The Deployment made a **new pod** right away (`rabbitmq-5d4b559c94-2vkvm`).
+4. For a few seconds the RabbitMQ page showed **502 Bad Gateway**, because RabbitMQ was down.
+5. After: the new RabbitMQ showed **"no queues"**. The queue and the order were **gone**.
+
+So Kubernetes brings the **pod** back, but it does **not** bring the **data** back.
 
 ### 4. Possible solutions
 
+**Solution 1: Add a Persistent Volume.**
+- A Persistent Volume is a piece of storage in the cluster [3]. It can be a cloud disk [3].
+- Its life is **separate from the pod** [3]. So if the pod is deleted, the disk and the data stay.
+- The app connects to the disk with a **PersistentVolumeClaim**, and the disk is mounted into the container [1].
+- Kubernetes shows this with a Deployment, `strategy: Recreate` (stop the old pod before starting the new one), and **only 1 pod**, because this disk can only be used by one pod at a time [1].
+
+**Solution 2: Use a StatefulSet instead of a Deployment.**
+- A StatefulSet gives each pod a **fixed identity** [5]. The pod name is the StatefulSet name plus a number, like `rabbitmq-0` [5].
+- The pod keeps this identity even when it is moved or restarted [5].
+- Each pod gets **its own storage** from a template (`volumeClaimTemplates`) using Persistent Volumes [5].
+- When the pods are deleted, their volumes are **not** deleted [5].
+
+This fixes both problems from my demo: the name stays the same, and the data stays on the disk.
+
+**Solution 3: Use a managed service like Azure Service Bus**.
 
 ### 5. Does Azure Service Bus solve these problems?
 
