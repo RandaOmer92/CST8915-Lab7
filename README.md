@@ -22,11 +22,12 @@
 
 RabbitMQ is **stateful**. 
 
-- A **stateless app does not keep important data. If it 
-restarts, nothing is lost. Example: `product-service`.
+- A **stateless** app does not keep important data. If it restarts, nothing is lost. Example: `product-service`.
 - A **stateful** app keeps data that must not be lost. RabbitMQ keeps the **queues** and the **messages** (our orders) until someone reads them.
 
 Kubernetes says StatefulSets are for apps that need **persistent storage** or a **stable, unique network identity** [5]. RabbitMQ needs both, so it is a stateful app.
+
+RabbitMQ lost the order in my demo **because** it is stateful. A stateless app would have nothing to lose. The problem is that our YAML runs it like a stateless app (a Deployment with no disk).
 
 ### 2. What is the problem with running RabbitMQ without persistent storage?
 
@@ -71,7 +72,22 @@ This fixes both problems from my demo: the name stays the same, and the data sta
 
 ### 5. Does Azure Service Bus solve these problems?
 
+**Yes.**
+
+- Azure Service Bus is a **fully managed** message broker with queues [4]. We do not run it in a pod, so there is no RabbitMQ pod to delete.
+- **Azure does the hard work** for us [4], so we do not need to set up disks or StatefulSets.
+- **Messages are kept safe.** Once Service Bus accepts a message, it keeps it durably in **triple-redundant storage** [4].
+
+**But we would need to change our app.** To switch from another broker to Service Bus, we need to create the queues again and **change the client library and settings** [4]. Our `order-service` uses the `amqplib` library for RabbitMQ, so it would need to change.
+
+---
+
 ## Lessons Learned
+
+- Kubernetes self-healing brings back the **pod**, not the **data**.
+- A "durable" queue is only safe if it is saved on a disk that lives outside the pod.
+
+---
 
 ## References
 
